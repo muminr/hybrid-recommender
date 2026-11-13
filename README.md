@@ -37,24 +37,49 @@ flowchart LR
 
 ## Results
 
-Synthetic data at MovieLens scale (610 users, 2,000 items, ~100k ratings), with a
-temporal per-user holdout. Reproduce with `make eval-synthetic`, or see
-[`reports/results_synthetic.md`](reports/results_synthetic.md).
+### MovieLens ml-latest-small (real data)
+
+610 users, 9,742 movies, 100,836 ratings. Temporal per-user holdout, 591 evaluated users.
+Reproduce with `make data && make eval`, or see
+[`reports/results_ml-latest-small.md`](reports/results_ml-latest-small.md).
 
 | Model | Recall@10 | NDCG@10 | HitRate@10 | Coverage |
 |---|---|---|---|---|
-| Popularity | 0.053 | 0.054 | 0.366 | 0.023 |
-| Content TF-IDF | 0.030 | 0.033 | 0.246 | 0.599 |
-| Item-kNN | 0.087 | 0.095 | 0.523 | 0.055 |
-| Implicit ALS | 0.096 | 0.104 | 0.551 | 0.279 |
-| Equal-weight blend | 0.101 | 0.109 | 0.573 | 0.086 |
-| **Two-stage hybrid (LightGBM)** | **0.113** | **0.121** | **0.597** | **0.139** |
+| Popularity | 0.077 | 0.078 | 0.316 | 0.009 |
+| Content TF-IDF | 0.006 | 0.005 | 0.034 | 0.185 |
+| Item-kNN | 0.117 | 0.104 | 0.442 | 0.030 |
+| Implicit ALS | 0.132 | 0.114 | 0.496 | 0.064 |
+| Equal-weight blend | 0.127 | 0.115 | 0.486 | 0.028 |
+| Two-stage hybrid (LightGBM) | 0.127 | 0.112 | 0.481 | 0.064 |
 
-The learned ranker beats the best single retriever by **+17% NDCG@10** and the naive
-blend by **+11%**, and recommends from 1.6× more of the catalogue than the blend.
+**Honest read:** on real data the learned ranker **ties** ALS and the blend. Paired
+bootstrap 95% confidence intervals on the NDCG@10 differences all include zero
+(hybrid − ALS: −0.001 [−0.011, +0.008]). Every personalized model clears the popularity
+baseline by about 45%. The hybrid keeps ALS-level coverage, more than double the blend's,
+at the same accuracy. That's the case for it today, not an accuracy win.
 
-Real MovieLens results: run `make data && make eval` (see below). The report is written
-to `reports/results_ml-latest-small.md`.
+Why the ranker doesn't pull ahead yet, and what I'd try next:
+- **Thin ranker training data.** With 610 users, the label window gives a few thousand
+  positives. Learning-to-rank earns its keep at much larger scale.
+- **Weak content signal.** Only about 3.7k tags across 9.7k movies, so the content
+  retriever contributes little beyond genres.
+- **Session-style timestamps.** Many MovieLens users rated dozens of movies in one
+  sitting, so "the future" in a temporal split is less distinct than in real viewing logs.
+
+### Synthetic data (MovieLens scale, stronger structure)
+
+610 users, 2,000 items, ~100k ratings from a generator with real genre and latent-factor
+structure ([`reports/results_synthetic.md`](reports/results_synthetic.md)). Here the
+ranker wins: **+17% NDCG@10** over the best single retriever and **+11%** over the blend.
+The gap between the two datasets is the lesson: a method that wins on clean synthetic
+data still has to prove itself on real data.
+
+### Why the evaluation split matters
+
+The same ALS model scores **NDCG@10 = 0.285 on a random split** and **0.114 on the
+temporal split**. The random split lets the model train on a user's later ratings and
+"predict" earlier ones, so it overstates quality by about 2.5×. Every number in this
+README uses the temporal split.
 
 ## Quickstart
 
