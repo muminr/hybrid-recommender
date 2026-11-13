@@ -142,7 +142,7 @@ again in time: retrievers fit on the earlier part, and the ranker learns to pred
 later part. Retrievers are then refit on the full window for serving.
 
 **Scale-free features, a bug I hit and fixed.** The first version fed raw retriever
-scores to the ranker, and the hybrid scored *below* the simple blend. The cause was
+scores to the ranker, and on synthetic data the hybrid scored *below* the simple blend. The cause was
 train/serve skew. Item-kNN scores grow with history length and popularity counts grow
 with traffic, so the thresholds the ranker learned on the smaller training window were
 wrong at serving time. Replacing raw scores with per-user z-scores, ranks and popularity
